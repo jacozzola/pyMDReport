@@ -1,0 +1,6 @@
+dist
+
+src/main.py
+src/test
+
+__pycache__
