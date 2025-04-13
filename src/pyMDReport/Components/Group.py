@@ -1,15 +1,26 @@
-from pyMDReport.Components.pyMDComponent import pyMDComponent
+from pyMDReport.Components.pyMDComponent import pyMDComponent, pyMDComponentType
 from pyMDReport.exceptions import AddComponentException
+from pyMDReport.types import Group, Report
 
 class Group(pyMDComponent):
 
-    def __init__(self, identifier, parent = None):
+    def __init__(
+            self, 
+            *components: pyMDComponent,
+            parent: Group | Report | None = None,
+            identifier: str | None = None, 
+        ):
         
-        super().__init__(identifier, parent)
-        
-        self.components : dict[str, pyMDComponent] = {}
+        super().__init__(parent, identifier)
 
-    def AddComponent(
+        self.components : dict[str, pyMDComponent] = {}
+        self.componentType = pyMDComponentType.Group
+
+        if len(components) > 0:
+            for component in components:
+                self.Add(component)
+
+    def Add(
             self,
             component: pyMDComponent,
             componentIdentifier: str | None = None,
@@ -23,6 +34,7 @@ class Group(pyMDComponent):
             raise AddComponentException("A pyMDComponent with the given identifier already exists in this group")
         
         self.components[componentId] = component
+        component.parent = self
 
     def MdRows( self ) -> list[str]:
         
@@ -32,6 +44,11 @@ class Group(pyMDComponent):
             mdRows += component.MdRows()
         return mdRows
     
-    def Md( self ) -> str:
-        
-        return '\n'.join(self.MdRows())
+    def Fill(
+            self,
+            componentData: dict[str, dict], 
+        ):
+
+        for componentIdentifier in componentData.keys():
+            if componentIdentifier in self.components.keys():
+                self.components[componentIdentifier].Fill( componentData[componentIdentifier] )

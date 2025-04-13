@@ -1,12 +1,13 @@
 from pyMDReport.Components.pyMDComponent import pyMDComponent
+from pyMDReport.types import Group, Report
 
 class ExampleComponent(pyMDComponent):
 
     def __init__(
             self, 
-            identifier,
             text: str, 
-            parent = None,
+            identifier: str | None = None,
+            parent: Group | Report | None = None
         ):
         
         super().__init__(identifier, parent)
