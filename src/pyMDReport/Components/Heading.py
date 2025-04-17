@@ -1,5 +1,5 @@
 from pyMDReport.Components.Text import Text
-from pyMDReport.types import Group, Report
+from pyMDReport.types import Group
 
 class Heading(Text):
 
@@ -8,7 +8,7 @@ class Heading(Text):
     def __init__(
             self,
             headingLevel: int,
-            parent: Group | Report | None = None,
+            parent: Group | None = None,
             identifier: str | None = None, 
             text: str | None = None,
         ):
@@ -21,12 +21,26 @@ class Heading(Text):
 
         if headingLevel > self.MAX_HEADING_LEVEL:
             headingLevel = self.MAX_HEADING_LEVEL
+        if headingLevel < 1:
+            self.headingLevel = 1
 
         self.headingLevel = headingLevel
 
-    def MdRows(self):
+    def Md(self) -> str:
         
-        return [f"{'#'*self.headingLevel} {self.text}"]
+        return f"{'#'*self.headingLevel} {self.text}"
+    
+    def GetLink(self):
+        
+        # https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#section-links
+        
+        link = self.text.lower().strip()
+        link = link.replace(" ", "-")
+        
+        for c in ",.;:_!?^()[]}{":
+            link = link.replace(c, "")
+        
+        return f"#{link}"
     
 
 
@@ -34,7 +48,7 @@ class H1(Heading):
 
      def __init__(
             self,
-            parent: Group | Report | None = None,
+            parent: Group | None = None,
             identifier: str | None = None, 
             text: str | None = None,
         ):
@@ -47,7 +61,7 @@ class H2(Heading):
 
      def __init__(
             self,
-            parent: Group | Report | None = None,
+            parent: Group | None = None,
             identifier: str | None = None, 
             text: str | None = None, 
         ):
@@ -60,7 +74,7 @@ class H3(Heading):
 
      def __init__(
             self,
-            parent: Group | Report | None = None,
+            parent: Group | None = None,
             identifier: str | None = None, 
             text: str | None = None,
         ):

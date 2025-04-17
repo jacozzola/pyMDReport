@@ -1,3 +1,3 @@
-# Report exceptions
-class AddGroupException(Exception): pass
 class AddComponentException(Exception): pass
+
+class InvalidAnchorException(Exception): pass

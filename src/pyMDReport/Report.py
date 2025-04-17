@@ -14,4 +14,4 @@ class Report ( Group ):
         if type(outputFile) == str:
             outputFileHandle = open(outputFile, "w")
 
-        outputFileHandle.write( self.Md() )
+        outputFileHandle.write( self.MdString() )

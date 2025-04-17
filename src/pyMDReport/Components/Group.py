@@ -1,4 +1,4 @@
-from pyMDReport.Components.pyMDComponent import pyMDComponent, pyMDComponentType
+from pyMDReport.Components.pyMDComponent import pyMDComponent, pyMDComponentData
 from pyMDReport.exceptions import AddComponentException
 from pyMDReport.types import Group, Report
 
@@ -8,13 +8,19 @@ class Group(pyMDComponent):
             self, 
             *components: pyMDComponent,
             parent: Group | Report | None = None,
-            identifier: str | None = None, 
+            identifier: str | None = None,
+            createAnchor: bool = False,
+            anchorName: str | None = None,
         ):
         
-        super().__init__(parent, identifier)
+        super().__init__(
+            parent=parent, 
+            identifier=identifier,
+            createAnchor=createAnchor,
+            anchorName=anchorName,
+        )
 
         self.components : dict[str, pyMDComponent] = {}
-        self.componentType = pyMDComponentType.Group
 
         if len(components) > 0:
             for component in components:
@@ -36,19 +42,28 @@ class Group(pyMDComponent):
         self.components[componentId] = component
         component.parent = self
 
-    def MdRows( self ) -> list[str]:
+    def MdRows(self):
         
-        mdRows = []
+        return [super().MdPrec(), self.Md()]
+
+    def Md( self ) -> str:
+
+        md = ""
         for componentIdentifier in self.components.keys():
             component = self.components[componentIdentifier]
-            mdRows += component.MdRows()
-        return mdRows
+            md += component.MdString() + "\n"
+        return md
     
     def Fill(
             self,
-            componentData: dict[str, dict], 
+            **componentData: pyMDComponentData, 
         ):
 
         for componentIdentifier in componentData.keys():
             if componentIdentifier in self.components.keys():
-                self.components[componentIdentifier].Fill( componentData[componentIdentifier] )
+                component = self.components[componentIdentifier]
+                cd = componentData[componentIdentifier]
+                if type(component) == Group:
+                    component.Fill(**cd)
+                else:
+                    component.Fill( cd )
