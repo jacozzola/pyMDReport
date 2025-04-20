@@ -1,7 +1,7 @@
 dist
+notes
 
 src/main.py
 src/test
-src/notes
 
 __pycache__
