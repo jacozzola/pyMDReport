@@ -1,21 +1,24 @@
 # pyMDReport
-pyMDReport is a Python package made to automatically create .md reports
+pyMDReport is a Python package made to automatically create .md reports  
+It's purpose is to easily create well-organized good-looking .md files. A good usage example could be to create a .md report after running tests on your script
 
 ## Table of contents
 - [How to install](#how-to-install)   
 - [Documentation](#documentation)
     - [pyMDComponent](#pymdcomponent)
-        - [pyMDComponent.MdRows](#pyMDComponent-MdRows)
+        - [pyMDComponent.GetAnchor](#pyMDComponent-GetAnchor)
         - [pyMDComponent.Md](#pyMDComponent-Md)
-        - [pyMDComponent.Fill](#pyMDComponent-Fill)
-    - [ComponentData](#componentdata)
+        - [pyMDComponent.BaseMd](#pyMDComponent-BaseMd)
+    - [ComponentType](#componenttype)
     - [Group](#group)
         - [Group.Add](#Group-Add)
-        - [Group.Fill](#Group-Fill)
+        - [Group.Update](#Group-Update)
+        - [Group.Get](#Group-Get)
     - [Text](#text)
         - [Text.Fill](#Text-Fill)
     - [Heading](#heading)
     - [Quote](#quote)
+    - [Link](#link)
 
 ## How To Install
 pyMDReport can be installed via *pip* through  
@@ -30,179 +33,267 @@ pyMDComponents are objects that can be converted in Markdown (md) format.
 A pyMDComponent has: 
 - an *identifier* ( if not given will use `uuid.uuid4()` )
 - possibly a *parent* ( a **Group**, which is also a pyMDComponent )    
+- a *type* ( consts from ComponentType class)
 ```python
 class pyMDComponent:
-    parent: Group | None
-    identifier: str             # uuid.uuid4()
-    anchor: Anchor | None
+    _identifier: str
+    _parent: Group | None
+    _type: ComponentType
     def __init__( self,
             parent: Group | None = None,
             identifier: str | None = None,
-            createAnchor: bool = False,
         )
+    def GetAnchor( self ) -> str
+    def BaseMd( self ) -> str
+    def Md( self ) -> str
 ```
 if *parent* is specified, the component is automatically added to the parent's *components* dict    
-Every pyMDComponent has 3 main methods
+Every pyMDComponent has these 3 methods:
 ```python
 class pyMDComponent:
-    def MdRows( self ) -> list[str]: pass
-    def Md( self ) -> str: pass
-    def Fill( self, 
-        *args: any, 
-        **kwargs: any 
-    ): pass
+    def GetAnchor( self ) -> str
+    def BaseMd( self ) -> str
+    def Md( self ) -> str
 ```
 
-<a id="pyMDComponent-MdRows"></a>
+<a id="pyMDComponent-GetAnchor"></a>
 
-- **MdRows**    
+- **GetAnchor**    
     ```python
-    def MdRows(self) -> list[str]
+    def GetAnchor(self) -> list[str]
     ``` 
-    The MdRows method is responsible of converting the component in a list of .md rows  
-    Every component has a different MdRows method, since components are converted in md rows in different ways 
+    The GetAnchor method is responsible of returning the id of the element's anchor.
+    Every component has a unique anchor by default, but it's not active until the *GetAnchor* method is called. 
 <br/>
 
 <a id="pyMDComponent-Md"></a>
 
 - **Md**    
     ```python
-    def Md(self) -> str     #'\n'.join(self.MdRows())
+    def Md( self ) -> str
     ``` 
-    The Md method returns the .md rows in a single string    
-    By default the rows are joined by newline characters
+    The Md method defines how the component is converted into MD format.  
+    This method is overwritten in subclasses based on how each component converts into MD format.
 <br/>
 
-<a id="pyMDComponent-Fill"></a>
+<a id="pyMDComponent-BaseMd"></a>
 
-- **Fill**   
+- **BaseMd**   
     ```python
-    def Fill( self, 
-        *args: any, 
-        **kwargs: any 
-    ): pass
+    def BaseMd( self ) -> str
     ``` 
-    The Fill method is responsible of updating the component's data using the params provided     
-    Every component has a different Fill method, since different components contain different data
+    The BaseMd method is responsible of calculating and returning the MD strings preceding the component's MD string (for example, the anchor's MD string if the anchor is active).   
+    Each component's *Md* method should first call the *BaseMd* method and then add the component's MD representation.
 <br/>
 
-### ComponentData
+### ComponentType
 ```python
-class ComponentData:
-    args: tuple
-    kwargs: dict[str, any]
-    def __init__( self,
-        *args,
-        **kwargs,
-    ): pass
+class ComponentType:
+    none = 0x00
+    pymdcomponent = 0x01
 
-CD = ComponentData
+    group = 0x100
+    report = 0x101
+
+    text = 0x200
+    heading = 0x201
+    quote = 0x202
+    link = 0x203
+    image = 0x204
 ```
-**ComponentData** (alias **CD**) is just a "storage class" used to group *args* and *kwargs* to call a [pyMDComponent](#pymdcomponent)'s [Fill](#pyMDComponent-Fill) method    
+**ComponentType** contains constants that are unique for each component type.
 
 ### Group
 ```python
-class Group (pyMDComponent):
-    components: dict[str, pyMDComponent]
+class Group(pyMDComponent):
+    _components : dict[str, pyMDComponent]
     def __init__( self, 
-        *components: pyMDComponent,
-        parent: Group | Report | None = None,
-        identifier: str | None = None, 
-    ): pass
+            parent : Group | None = None, 
+            identifier : str | None = None,
+        )
+    def Add( self,
+            component: pyMDComponent,
+        ) -> None
+    def Update( self,
+            componentIdentifier: str,
+            component: pyMDComponent,  
+        ) -> None
+    def Get( self, identifier: str | list[str] ) -> pyMDComponent
 ```
 Child class of [pyMDComponent](#pymdcomponent).     
 A **Group** is a component that "contains" other components.       
-Components are associated to their *identifier* in Group.components     
-If any pyMDComponent is given on init, the *components* dict is automatically updated     
+Components are associated to their *identifier* in Group.components          
 ```python
 Group.components = {
     "example" : pyMDComponent,
 }
 ``` 
-A Group has 2 main methods
+Every Group has these methods:
 ```python
 class Group (pyMDComponent):
     def Add( self,
-        component: pyMDComponent, 
-        componentIdentifier : str | None = None, 
-    ): pass
-    def Fill( self,
-        componentData: dict[str, ComponentData], 
-    ): pass
+            component: pyMDComponent,
+        ) -> None
+    def Update( self,
+            componentIdentifier: str,
+            component: pyMDComponent,  
+        ) -> None
+    def Get( self, identifier: str | list[str] ) -> pyMDComponent
 ```
 <a id="Group-Add"></a>
 - **Add**   
     ```python
     def Add( self,
-        component: pyMDComponent, 
-        componentIdentifier : str | None = None, 
-    )
+            component: pyMDComponent,
+        ) -> None
     ```   
     The Add method is responsible of associating the given component to the group.  
-    It adds the component to Group.components   
-    If *componentIdentifier* is specified, it is used as the key associated to the component 
+    It adds the component to Group._components using the *component*'s *identifier* as a key   
+    A Group can also contain other groups as components 
 <br/>
-<a id="Group-Fill"></a>
-- **Fill**    
+<a id="Group-Update"></a>
+- **Update**    
     ```python
-    def Fill( self,
-        componentData: dict[str, ComponentData], 
-    )
+    def Update( self,
+            componentIdentifier: str,
+            component: pyMDComponent,  
+        ) -> None
     ```        
-    The Group's Fill method is responsible of filling each child component with the correspondent data.    
-    *componentData* must be a dict associating the child component *identifier* and the [ComponentData](#componentdata) instance
+    The Update method is responsible of modifying the group's *_components* dict by replacing the component associated to *componentIdentifier* with the given *component*
+<br/>
+<a id="Group-Get"></a>
+- **Get**    
+    ```python
+    def Get( self, identifier: str | list[str] ) -> pyMDComponent
+    ```        
+    The **Get** method is responsible of returning the component associated to the given identifier.    
+    To get a component that is part of a child Group from the parent Group, use a list of identifiers
 
 ### Text
 ```python
-class Text (pyMDComponent):
-    text: str
-    def __init__( self, 
-        text: str | None = None,
-    ): pass
+class Text (pyMDComponent)
+    _text : str
+    _outText : str
+    def __init__( self,
+            parent : Group | None = None, 
+            identifier : str | None = None,
+            text: str | None = None,
+            bold : bool = False,
+            italic: bool = False,
+            strike: bool = False,
+            sub: bool = False,
+            sup: bool = False,
+            underlined : bool = False,
+        )
+    def Format( self, *args, **kwargs ) -> None
 ```
 Child class of [pyMDComponent](#pymdcomponent).     
 A **Text** is a basic component that represents text.            
-If any *text* is given on init, the *components* dict is automatically updated     
-A Text has 1 main method
+It includes various styling options:
+- **bold**
+- _italic_
+- ~~strike~~ 
+- <sup>sup</sup>
+- <sub>sub</sub>
+- <ins>underlined</ins>
+
+Every Text has this method:
 ```python
 class Text (pyMDComponent):
-    def Fill( self,
-        text: str, 
-    ): pass
+    def Format( self, *args, **kwargs ) -> None
 ```
-<a id="Text-Fill"></a>
-- **Fill**   
+<a id="Text-Format"></a>
+- **Format**   
     ```python
-    def Fill( self,
-        text: str, 
-    )
+    def Format( self, *args, **kwargs ) -> None
     ```   
-    The Text's Fill method is responsible of storing the given *text* string.    
+    The Format method is responsible of calling str.format() on the component's *_text* string.   
+    This can be used to create a Text variable with formattable text (like `"Today is {}"`) and format it with proper data later in the script.  
+    When a Text component is formatted, the component's *_outText* is updated with the formatted string
+
+When adding a Text component to another Text component, the result is a Text component that has:
+- As *_text* the sum of *self._text* and *other._text*
+- As *_outText* the sum of *self._text* and *other._text*
+- The same type of *self* (for example, when adding a text to a [Heading](#heading), the result is a Heading)
 
 ### Heading
 ```python
 class Heading ( Text ):
-    MAX_HEADING_LEVEL: int = 3
-    def __init__( self,
-        headingLevel: int,
-    ): pass
+    MAX_HEADING_LEVEL = 3
+    _headingLevel: int
+    def __init__( self, 
+            parent : Group | None = None, 
+            identifier : str | None = None,
+            headingLevel : int = 1,
+            text: str | None = None,
+            bold : bool = False,
+            italic: bool = False,
+            strike: bool = False,
+            sub: bool = False,
+            sup: bool = False,
+            underlined : bool = False,
+        ): pass
 ```
 Child class of [Text](#text).     
 A **Heading** is a heading text. 
 *headingLevel* could be from 1 (highest) to 3 (lowest)  
 A Heading of level 1 could be created using **H1**
 ```python
-heading = Heading(1)
+heading = Heading( text = "Heading here", headingLevel = 1 )
 # equals
-heading = H1()
+heading = H1( text = "Heading here" )
 ```
 The same thing can be done with **H2** and **H3**  
 
 ### Quote
 ```python
-class Quote ( Text ):
-    pass
+class Quote(Text):
+    def __init__( self, 
+        parent : Group | None = None, 
+        identifier : str | None = None,
+        text: str | None = None,
+        bold : bool = False,
+        italic: bool = False,
+        strike: bool = False,
+        sub: bool = False,
+        sup: bool = False,
+        underlined : bool = False,
+    )
 ```
 Child class of [Text](#text).     
 A **Quote** is a quoted text. 
 
+### Link
+```python
+class Link(Text):
+    def __init__( self, 
+            target : str | list[str],
+            parent : Group | None = None, 
+            identifier : str | None = None, 
+            text : str | None = None, 
+            bold : bool = False, 
+            italic : bool = False, 
+            strike : bool = False, 
+            sub : bool = False, 
+            sup : bool = False, 
+            underlined : bool = False,
+        ): pass
+```
+Child class of [Text](#text).     
+A **Link** can be either external or internal.  
+If *target* is a string, the link points directly to the given *target*.  
+If *target* is a [**pyMDComponent**](#pymdcomponent) or any **child class**, the link points to the *target*'s anchor.
+
+### Image
+```python
+class Image(Link):
+    def __init__( self,
+            src : str,
+            alt : str = "",
+            parent : Group | None = None, 
+            identifier : str | None = None,
+        ): pass
+```
+Child class of [Link](#link).     
+An **Image** is... an image.  
+Check GitHub's guide on [md images](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#images) for a better understanding of what *src* can be
